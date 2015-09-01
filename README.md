@@ -1,10 +1,12 @@
 
 
 SpringBoot Rest comibines with JVM Futures from the following libraries
-*Guava
-*Rxjava
-*Akka Futures(and actor)
-*Java8 Completable Futures
+<ol>
+<li>Guava</li>
+<li>Rxjava </li>
+<li>Akka Futures(and actor)</li>
+<li>Java8 Completable Futures </li>
+</ol>
 
 Compare the Synchronous version vs different Asynchronous, the response time is significantly reduced from ~5 seconds to 1 - 1.5 seconds
 
