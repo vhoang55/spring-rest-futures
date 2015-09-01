@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en" ng-app="simulatorApp">
+<head>
+    <!--<link rel="stylesheet" href="webjars/bootstrap/3.3.5/css/bootstrap.css" media="screen"/>-->
+    <script type="application/javascript" src="webjars/angularjs/1.4.3/angular.js"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap-theme.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+    <script type="application/javascript" src="script/SimulatorController.js"></script>
+    <meta charset="UTF-8">
+    <title></title>
+</head>
+
+<style type="text/css">
+    .bs-example{
+        margin: 60px;
+    }
+</style>
+</head>
+<body >
+<div class="bs-example"  ng-controller="simulatorController" >
+    <ul class="nav nav-tabs">
+        <li class="active" ><a data-toggle="tab" href="#intro">Intro: Concurrency and Async</a></li>
+        <li ><a data-toggle="tab" href="#synchRest">Synch Spring Rest</a></li>
+        <li class="dropdown">
+            <a data-toggle="dropdown" class="dropdown-toggle" href="#">Guava Listenable Futures <b class="caret"></b></a>
+            <ul class="dropdown-menu">
+                <li><a data-toggle="tab" href="#guavaJava7">Guava - Prejava 8 ListableFuture</a></li>
+                <li><a data-toggle="tab" href="#guavaLambda">Guava - ListableFuture Lambda</a></li>
+            </ul>
+        </li>
+        <li><a data-toggle="tab" href="#java8">Java 8 Completable Futures</a></li>
+        <li><a data-toggle="tab" href="#rxJava">RxJava Observables</a></li>
+        <li><a data-toggle="tab" href="#akkaFuture">Akka(Scala) Futures - with Actor</a></li>
+    </ul>
+    <div class="tab-content">
+
+        <div   id="intro" class="tab-pane fade in active">
+            <h3>Java concurrency and different third party libraries</h3>
+            <p>
+                This project is running on top of SpringBoot/Rest using Futures from the following libraries/toolkit
+                <ol>
+                 <li>Guava Futures - ListenableFutures</li>
+                 <li>Java8 Completable Futures</li>
+                 <li>RxJava</li>
+                 <li>Akka</li>
+                </ol>
+
+               with a little bit of Spring's ListenableFutures (mainly because trying out the spring async rest template). <br>
+               with some futures-conversion from <a target="_blank" href="http://blog.krecan.net/2014/06/11/converting-listenablefutures-to-completablefutures-and-back/">here</a>
+
+            </p>
+            <p>
+                <br>
+                Original problem domain is taken from Jersey's framework examples <a href="https://github.com/jersey/jersey/tree/master/examples/rx-client-webapp/src/main/java/org/glassfish/jersey/examples/rx" target="_blank"> here </a>
+                more blogging about that later.... Jersey's client provide a nice support for RxJava... Wish Spring RestTemplate has that kind of support ... maybe the Spring team wants to provide
+                tigher integration with their  <a target="_blank" href="https://github.com/reactor/reactor">Reactor</a> project instead ?
+                <br>
+            </p>
+            
+            <p>
+                Problem domain:
+                <img src="assets/sample.jpeg">
+
+            </p>
+            <p>
+                we want to do all of these concurrently by composing futures to execute the call asynchronously so that its non-blocking
+            </p>
+
+            <p>
+                For each for these libraries, i'll write a few blog entries on how these awesome libraries/toolkit abstract away the pain for writing/managing
+                concurrency code.... and some spring/springboot topics .... blog could be found here <a href="https://randomthought2015.wordpress.com/">https://randomthought2015.wordpress.com</a>
+            </p>
+              <p>
+                    Twitter's <a target="_blank" href="https://twitter.github.io/finagle/guide/Futures.html">Finagle</a> is also another interesting library for composing futures that I haven't explored... maybe soon
+              </p>
+            <p>Also, things that I kinda not focus on at the moment are Error Handling and Unit Test... Will blog more about these topics shortly</p>
+        </div>
+
+        <div   id="synchRest" class="tab-pane fade ">
+            <h3>Spring Rest</h3>
+            <p>
+                Check out this String Controller <b>TravelAgentController</b> the code is fairly straight forward.
+
+                <pre>
+                    @RestController
+                    public class TravelAgentController {
+
+                        @RequestMapping("/api/travelSuggestion")
+                        public AgentResponse suggestSynch() {
+                           1. get the visited destinations
+                           2. get the recommended destinations
+                           3. For each of the recommended, get the weather forecast and the cost
+                           4. combined everything into a resonse object
+                           5. set the processing time, and return back to the client as a REST Object
+
+                        }
+                }
+                </pre>
+        </pre>
+
+            </p>
+            <p><code>{{serverResponse}}</code></p>
+            <h4>Processing Time: {{processingTime}}</h4>
+            <a class="btn btn-success btn-large" ng-click="processErrorInjection()">Load Data...</a>
+        </div>
+
+        <div id="guavaJava7" class="tab-pane fade">
+            <h3>Using Guava Listenable Futures - Pre jdk 8 syntax</h3>
+            <p><a href ="http://docs.guava-libraries.googlecode.com/git/javadoc/com/google/common/util/concurrent/package-summary.html" target="_blank"> Guava Concurrency</a></p>
+
+            Check out the the <b>TravelAgentGuavaController</b> below... I'll write some blog pose about this soon, especially on Guava <b>ListenableFuture</b>, and Guava's fture can be composed
+            <p>
+                <pre>
+                   @RestController
+                    public class TravelAgentGuavaController {
+                        @RequestMapping("/api/travelGuava")
+                        public DeferredResult<AgentResponse> guavaFutureWithCallback() {
+                        ListenableFuture<List<AgentResponse>> combinedFutures =
+                            Futures.successfulAsList(asList(visited(response), recommended(response)));
+                            Futures.addCallback(combinedFutures,
+                            ...
+                            return deferredAgentResponse;
+                         }
+                    }
+                </pre>
+
+            </p>
+
+            <p>Spring also provide it's own <b>ListenableFuture</b> ... there are some Futures conversion going on in there .. i'll write
+            more about this.
+
+            <br/>
+            <p>
+               Google guava's future is very powerful, but it's hard to compose and hard to read. I think the reason was it's was built
+               on top JDK6/7, so there are a lot of noises when we want to compose futures together.
+            </p>
+
+            <p><code>{{guava7Response}}</code></p>
+            <h4>Processing Time: {{guava7processingTime}}</h4>
+            <a class="btn btn-success btn-large" ng-click="processGuava7Request()">Load Data...</a>
+        </div>
+
+        <div id="guavaLambda" class="tab-pane fade">
+            <h3>Guava Listenable Futures with Lambda</h3>
+            <p>check out this controller <b>GuavaWithLamdaController</b>, basically try out java-8 lambda 8 syntax on top of google guava to see how it looks</p>
+            <p>
+                <pre>
+                   @RestController
+                    public class GuavaWithLamdaController {
+
+                        @RequestMapping("/api/travelGuavaLamda")
+                        public DeferredResult<AgentResponse> futuresWithLambda() {
+
+                        }
+                    }
+               </pre>
+            </p>
+            <p><code>{{guava8Response}}</code></p>
+            <h4>Processing Time: {{guava8processingTime}}</h4>
+            <a class="btn btn-success btn-large" ng-click="processGuava8Request()">Load Data...</a>
+        </div>
+
+        <div id="java8" class="tab-pane fade">
+            <h3>Java 8 Completable Futures</h3>
+            <p>Java 8 makes a big improvement to the Java Future that was introduced in java5 Futures- namely CompletableFuture. </p><br/>
+            <p>CompletableFuture is sort of like a combination of ListenableFuture and SettableFuture in Guava's library.
+             It totally how we compose futures and writing asynch code
+            </p>
+            <p>Check out this controller <b>Java8CompletableFutureController</b> </p>
+            <b>I'll write a blog about this soon</b>
+            <p>
+                <pre>
+                   @RestController
+                    public class Java8CompletableFutureController {
+
+                       @RequestMapping("/api/travelJava8")
+                        public DeferredResult<AgentResponse> futureComposing() {
+                            DeferredResult deferredResult = new DeferredResult();
+                            final long time = System.nanoTime();
+
+                            CompletableFuture.completedFuture(new AgentResponse())
+                            .thenCombine(visited(), AgentResponse::visited)
+                            .thenCombine(getRecommendations(), AgentResponse::recommended)
+                            .whenCompleteAsync((response, throwable) -> {
+
+                                response.setProcessingTime((System.nanoTime() - time) / 1000000);
+                                deferredResult.setResult(response);
+                            });
+
+                            return  deferredResult;
+                        }
+                 }
+
+                </pre>
+
+            </p>
+            <p><code>{{java8Response}}</code></p>
+            <h4>Processing Time: {{java8processingTime}}</h4>
+            <a class="btn btn-success btn-large" ng-click="processJava8Request()">Load Data...</a>
+        </div>
+
+        <div id="rxJava" class="tab-pane fade">
+            <h3>Rxjava Observable</h3>
+            <p>Composing Rxjava Using Observables</p>
+            <p>Rxjava is one of very very very powerful library for writing concurrency code... Reactive Extension was originated from Microsoft
+                and later made it way to Netfix. <a href="https://github.com/ReactiveX/RxJava" target="_blank">RxJava</a>. Pretty much everything
+                in RxJava are Observables. I'll write some more stuff about this soon, but check out this controller <b>TravelAgentRxJavaController</b> to see how RxJava's observables
+                are used to compose asynch programming.
+            </p>
+            <p>
+                <pre>
+                  @RestController
+                    public class TravelAgentRxJavaController {
+
+                        @RequestMapping("/api/rxJavaTravelAgent")
+                        public DeferredResult<AgentResponse> observable() {
+                            final long time = System.nanoTime();
+                            DeferredResult<AgentResponse> deffered = new DeferredResult<>();
+                                Observable.just(new AgentResponse())
+                                    .zipWith(visited(), (response, visited) -> {
+                                    response.setVisited(visited);
+                                    return response;
+                                })
+                                .zipWith(recommended(), (response, recommendations) -> {
+                                    response.setRecommended(recommendations);
+                                    return response;
+                                })
+                                .observeOn(Schedulers.io())
+                                .subscribe(response -> {
+                                    response.setProcessingTime((System.nanoTime() - time) / 1000000);
+                                    deffered.setResult(response);
+                                });
+                             return deffered;
+                        }
+                }
+                </pre>
+        </pre>
+            </p>
+            <p><code>{{rxJavaResponse}}</code></p>
+            <h4>Processing Time: {{rxJavaprocessingTime}}</h4>
+            <a class="btn btn-success btn-large" ng-click="processRxJava8Request()">Load Data...</a>
+        </div>
+
+        <div id="akkaFuture" class="tab-pane fade">
+            <h3>Akka/Scala Futures With Actor</h3>
+            <p>Using the Ask Pattern and and Futures Compose</p>
+            <p>Akka is another one of those brilliant toolkit from Typesafe. Akka uses Actors model for concurrency. Actors pass messages to other actors
+                synchronously/asynchronously to achieve work. <a href="http://akka.io/">Here is the link</a>. <br> One of the less often talk about feature
+                of the akka toolkit is Futures. Futures in Akka toolkit are composable. In the earlier version, Futures are part of Akka's dispatcher.
+                Howerver, newer version combines that to use Scala's Futures instead.
+            </p>
+            <p>
+                here is a good article that talks about using Futures for concurrency instead of Actor
+                <a href="https://www.chrisstucchio.com/blog/2013/actors_vs_futures.html" target="_blank"> Dont use actor for concurrency</a>
+            </p>
+            <p>
+              Couple things I wanted to note... This example doesn't need to use Actor at all, i just wanted to mix actor and
+                Futures together to see how they works together. <br>
+                If there is an option to use Akka from scratch, I think's its better to use Scala instead of Java -- mainly because
+                it's more concise to express something in scala than java. <br>
+
+                Check out this <b>AkkaTravelAgentController</b> for more details .. I'll have a blog about this soon when i have time
+            </p>
+            <p>
+                <pre>
+                @RestController
+                public class AkkaTravelAgentController {
+
+                    @RequestMapping("/api/akkaActorTravelAgent")
+                    public DeferredResult&lt;AgentResponse&gt; processRequest() {
+                        final Future&lt;Object&gt; visitedRequest = Patterns.ask(recommenderActor, new RequestVisit(),  new Timeout(Duration.create(5, TimeUnit.SECONDS)));
+                        final Future&lt;Object&gt; recommendations = Patterns.ask(recommenderActor, new RecommendationRequest(),  new Timeout(Duration.create(5, TimeUnit.SECONDS)));
+
+                        .
+                        .
+                        .
+                        agentResponseFuture.onComplete(new OnComplete&lt;AgentResponse&gt;() {
+                            @Override
+                            public void onComplete(Throwable failure, AgentResponse response) throws Throwable {
+                                if (response != null) {
+                                    response.setProcessingTime((System.nanoTime() - time) / 1000000);
+                                    deferredResult.setResult(response);
+
+                                } else {
+                                    deferredResult.setErrorResult(failure);
+                                }
+                            }
+                        }, SpringAppContext.actorSystem().dispatcher());
+
+                        return deferredResult;
+
+                    }
+              }
+
+            </pre>
+            </p>
+            <p><code>{{akkaFutureResponse}}</code></p>
+            <h4>Processing Time: {{akkaFutureprocessingTime}}</h4>
+            <a class="btn btn-success btn-large" ng-click="processAkkaRequest()">Load Data...</a>
+
+
+    </div>
+</div>
+</body>
+</html>
